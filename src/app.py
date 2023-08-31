@@ -3,6 +3,7 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 """
 import os
 from flask import Flask, request, jsonify, url_for
+from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity
 from flask_migrate import Migrate
 from flask_swagger import swagger
 from flask_cors import CORS
@@ -25,6 +26,56 @@ MIGRATE = Migrate(app, db)
 db.init_app(app)
 CORS(app)
 setup_admin(app)
+
+# Setup the Flask-JWT-Extended extension
+app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this!
+jwt = JWTManager(app)
+
+#singup
+@app.route('/signup', methods=['POST'])
+def signup():
+    request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
+    
+    new_user = User(email = request_body["email"], password = request_body["password"])
+    db.session.add(new_user)
+    db.session.commit()
+   
+    return {
+        "response": new_user.serialize(),
+        "msg": "Usuario creado con éxito"
+    }
+
+#login
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.json.get("email", None)
+    password = request.json.get("password", None)
+    user_query = User.query.filter_by(email=email).first()
+    #print(user_query)
+
+    if user_query is None:
+        return jsonify({"msg":"Email no existe"}), 404
+    
+    if email != user_query.email or password != user_query.password:
+        return jsonify({"msg": "Email o contraseña incorrectos"})
+    
+    access_token = create_access_token(identity=email)
+    response_body = {
+        "access_token": access_token,
+        "email": user_query.serialize()
+    }
+    return jsonify(response_body)
+
+@app.route("/protected", methods=["GET"])
+@jwt_required()
+def protected():
+    # Access the identity of the current user with get_jwt_identity
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200   
+    
+
+
+
 
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
