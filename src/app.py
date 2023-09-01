@@ -37,6 +37,9 @@ def signup():
     request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
     
     new_user = User(email = request_body["email"], password = request_body["password"])
+    user_verif = User.query.filter_by(email=request_body["email"]).first()
+    if user_verif:  
+        return jsonify({"msg":"El usuario ya existe"}), 404
     db.session.add(new_user)
     db.session.commit()
    
@@ -66,12 +69,20 @@ def login():
     }
     return jsonify(response_body)
 
-@app.route("/protected", methods=["GET"])
+@app.route("/user/fav", methods=["GET"])
 @jwt_required()
 def protected():
     # Access the identity of the current user with get_jwt_identity
-    current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200   
+    current_user_email = get_jwt_identity()
+    user = User.query.filter_by(email = current_user_email).first()
+    print(user.serialize())
+    favorites = Fav.query.filter_by(user_id = user.id).all()
+    response = list(map(lambda favorite: favorite.serialize(), favorites))
+    if response == []:
+        return jsonify({"msg": "El usuario no tiene favoritos ingresados"})
+
+
+    return jsonify({"results": response}), 200
     
 
 
