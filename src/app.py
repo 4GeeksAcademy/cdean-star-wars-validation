@@ -60,12 +60,13 @@ def login():
         return jsonify({"msg":"Email no existe"}), 404
     
     if email != user_query.email or password != user_query.password:
-        return jsonify({"msg": "Email o contraseña incorrectos"})
+        return jsonify({"msg": "Email o contraseña incorrectos"}), 401
     
     access_token = create_access_token(identity=email)
     response_body = {
         "access_token": access_token,
-        "email": user_query.serialize()
+        "email": user_query.serialize(),
+        "msg":"Bienvenidx, " + email
     }
     return jsonify(response_body)
 
@@ -75,6 +76,7 @@ def protected():
     # Access the identity of the current user with get_jwt_identity
     current_user_email = get_jwt_identity()
     user = User.query.filter_by(email = current_user_email).first()
+    #favs = db.session.query(Fav,People,Planets,Vehicles,Starships).join(People).join(Planets).join(Vehicles).join(Starships).all()
     print(user.serialize())
     favorites = Fav.query.filter_by(user_id = user.id).all()
     response = list(map(lambda favorite: favorite.serialize(), favorites))
@@ -84,6 +86,11 @@ def protected():
 
     return jsonify({"results": response}), 200
     
+@app.route("/valid-token", methods=["GET"])
+@jwt_required()
+def valid_token():
+    current_user_email = get_jwt_identity()
+    return jsonify({"is_logged": True}), 200
 
 
 

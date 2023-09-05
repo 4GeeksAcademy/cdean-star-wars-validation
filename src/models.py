@@ -78,6 +78,7 @@ class Planets(db.Model):
 
 class Vehicles(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=False, nullable=False)
     model = db.Column(db.String(120), unique=False, nullable=False)
     vehicle_class = db.Column(db.String(120), unique=False, nullable=False)
     manufacturer = db.Column(db.String(120), unique=False, nullable=False)
@@ -90,6 +91,7 @@ class Vehicles(db.Model):
     def serialize(self):
         return {
             "id": self.id,
+            "name": self.name,
             "model": self.model,
             "vehicle_class": self.vehicle_class,
             "manufacturer": self.manufacturer,
@@ -139,12 +141,17 @@ class Fav(db.Model):
         return '<Fav %r>' % self.id
 
     def serialize(self):
+        people_info = People.query.filter_by(id = self.people_id).first()
+        planets_info = Planets.query.filter_by(id = self.planets_id).first()
+        vehicles_info = Vehicles.query.filter_by(id = self.vehicles_id).first()
+        starships_info = Starships.query.filter_by(id = self.starships_id).first()
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "people_id": self.people_id,
-            "planets_id": self.planets_id,
-            "vehicles_id": self.vehicles_id,
-            "starships_id": self.starships_id
+            "person": None if people_info is None else people_info.serialize(),
+            "planet": None if planets_info is None else planets_info.serialize(),
+            "vehicle": None if vehicles_info is None else vehicles_info.serialize(),
+            "starship": None if starships_info is None else starships_info.serialize()
             # do not serialize the password, its a security breach
         }
+
